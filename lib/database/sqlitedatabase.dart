@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:lahhagenda/models/Agenda.dart';
 import 'package:path/path.dart';
+import 'package:intl/intl.dart';
 
 class SQLiteDatabase {
   Database? _database;
@@ -33,15 +34,26 @@ class SQLiteDatabase {
     return _database!;
   }
 
+  Agenda _mapToAgenda(Map<String, dynamic> row) {
+    return Agenda(
+      id: row['id'],
+      nome: row['nome'],
+      diahora: DateFormat('yyyy-MM-dd HH:mm:ss').parse(row['diahora']),
+      procedimento: row['procedimento'],
+    );
+  }
+
   Future<List<Agenda>> getAllAgenda() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db!.query('agenda');
     return List.generate(maps.length, (index) {
+      final DateTime diahora = DateTime.parse(maps[index]['diahora']);
       return Agenda(
-          id: maps[index]['id'],
-          nome: maps[index]['nome'],
-          diahora: maps[index]['diahora'],
-          procedimento: maps[index]['procedimento']);
+        id: maps[index]['id'],
+        nome: maps[index]['nome'],
+        diahora: diahora,
+        procedimento: maps[index]['procedimento'],
+      );
     });
   }
 }

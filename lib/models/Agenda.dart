@@ -26,8 +26,8 @@ class Agenda {
     return {
       'id': id,
       'nome': nome,
-      'diahora': diahora,
-      'procedimento': procedimento
+      'procedimento': procedimento,
+      'diahora': diahora.toIso8601String(), // Converte para ISO 8601
     };
   }
 }

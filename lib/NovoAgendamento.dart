@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lahhagenda/database/sqlitedatabase.dart';
 import 'package:intl/intl.dart';
+import 'package:lahhagenda/models/Agenda.dart';
 
 class NovoAgendamento extends StatefulWidget {
   final SQLiteDatabase sqliteDatabase;
@@ -29,10 +30,18 @@ class _AgendarState extends State<NovoAgendamento> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2101),
     );
-    if (picked != null && picked != selectedDate)
+    if (picked != null && picked != selectedDate) {
       setState(() {
         selectedDate = picked;
+        diahora = DateTime(
+          picked.year,
+          picked.month,
+          picked.day,
+          selectedTime.hour,
+          selectedTime.minute,
+        );
       });
+    }
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -40,10 +49,18 @@ class _AgendarState extends State<NovoAgendamento> {
       context: context,
       initialTime: selectedTime,
     );
-    if (picked != null && picked != selectedTime)
+    if (picked != null && picked != selectedTime) {
       setState(() {
         selectedTime = picked;
+        diahora = DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          picked.hour,
+          picked.minute,
+        );
       });
+    }
   }
 
   @override
@@ -57,18 +74,16 @@ class _AgendarState extends State<NovoAgendamento> {
         iconTheme: IconThemeData(
           color: Colors.black,
         ),
-        backgroundColor:
-            Color.fromARGB(255, 221, 177, 192), // Cor de fundo da AppBar
+        backgroundColor: const Color.fromARGB(255, 221, 177, 192),
       ),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage(
-                "assets/lahhfundo2.jpeg"), // Substitua pelo caminho da sua imagem
+            image: AssetImage("assets/lahhfundo2.jpeg"),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              Color.fromARGB(255, 0, 0, 0).withOpacity(0.5), // Ajuste a opacidade aqui
-              BlendMode.lighten, // Você pode experimentar com diferentes modos
+              Color.fromARGB(255, 255, 251, 251).withOpacity(0.5),
+              BlendMode.lighten,
             ),
           ),
         ),
@@ -126,8 +141,36 @@ class _AgendarState extends State<NovoAgendamento> {
                     ],
                   )),
               ElevatedButton(
-                onPressed: () {
-                  // Implemente a lógica de agendamento aqui
+                onPressed: () async {
+                  if (nome != null && diahora != null && procedimento != null) {
+                    Agenda novaagenda = Agenda(
+                        nome: nome!,
+                        diahora: diahora!,
+                        procedimento: procedimento!);
+                    try {
+                      final db = await widget.sqliteDatabase.database;
+                      await db?.insert(
+                        'agenda',
+                        novaagenda.toMap(),
+                      );
+                      nome = null;
+                      diahora = null;
+                      procedimento = null;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cliente adicionado.'),
+                        ),
+                      );
+                      await Future.delayed(const Duration(seconds: 1));
+
+                      Navigator.pop(context);
+                    } catch (e) {
+                      print('Falha ao adicionar cliente: $e');
+                    }
+                  } else {
+                    print('Falha ao adicionar cliente. Valores nulos!');
+                  }
                 },
                 child: Text('Agendar'),
               ),
@@ -147,7 +190,7 @@ class _AgendarState extends State<NovoAgendamento> {
           style: TextStyle(fontSize: fontSize),
         ),
         child,
-        SizedBox(height: 16.0),
+        const SizedBox(height: 16.0),
       ],
     );
   }
