@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lahhagenda/database/sqlitedatabase.dart';
-import 'package:lahhagenda/models/Agenda.dart';
 import 'package:intl/intl.dart';
 
 class NovoAgendamento extends StatefulWidget {
