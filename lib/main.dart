@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:lahhagenda/ListarAgendamentos.dart';
 import 'package:lahhagenda/NovoAgendamento.dart';
 import 'package:lahhagenda/database/sqlitedatabase.dart';
+import 'package:lahhagenda/Historico.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -54,12 +57,21 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  void _navigateHistorico() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Historico(
+          sqLiteDatabase: SQLiteDatabase(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color.fromARGB(
-            255, 221, 177, 192), // Substitua "Colors.red" pela cor desejada
+        backgroundColor: Color.fromARGB(255, 221, 177, 192), // Substitua "Colors.red" pela cor desejada
         title: Text(widget.title),
       ),
       body: Container(
@@ -84,7 +96,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 onPressed: _navigateToAgenda,
                 style: ButtonStyle(
                   backgroundColor: MaterialStateProperty.all<Color>(
-                      Color.fromARGB(255, 255, 237, 237)), // Defina a cor de fundo desejada
+                      Color.fromARGB(255, 255, 237,
+                          237)), // Defina a cor de fundo desejada
                 ),
                 child: const Text(
                   'Agendar Procedimento',
@@ -94,9 +107,24 @@ class _MyHomePageState extends State<MyHomePage> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _navigateToListaAgendamentos,
-                style: ButtonStyle(backgroundColor: MaterialStateProperty.all<Color>(Color.fromARGB(255, 255, 237, 237))),
+                style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all<Color>(
+                        Color.fromARGB(255, 255, 237, 237))),
                 child: const Text(
                   'Listar Agendamentos',
+                  style: TextStyle(
+                    color: Color.fromARGB(255, 0, 0, 0),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _navigateHistorico,
+                style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all<Color>(
+                        Color.fromARGB(255, 255, 237, 237))),
+                child: const Text(
+                  'Histórico de Atendimento',
                   style: TextStyle(
                     color: Color.fromARGB(255, 0, 0, 0),
                   ),

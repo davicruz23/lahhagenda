@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lahhagenda/database/sqlitedatabase.dart';
 import 'package:intl/intl.dart';
 import 'package:lahhagenda/models/Agenda.dart';
+import 'package:sqflite/sqflite.dart';
 
 class NovoAgendamento extends StatefulWidget {
   final SQLiteDatabase sqliteDatabase;
@@ -63,11 +64,22 @@ class _AgendarState extends State<NovoAgendamento> {
     }
   }
 
+  Future<bool> _verificarHorarioOcupado(DateTime horario) async {
+    final db = await widget.sqliteDatabase.database;
+    final horarioStr = horario.toUtc().toIso8601String();
+    final count = Sqflite.firstIntValue(await db!.rawQuery(
+      'SELECT COUNT(*) FROM agenda WHERE diahora = ?',
+      [horarioStr],
+    ));
+    print('Número de registros encontrados: $count');
+    return count! > 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Novo Agendamento',
           style: TextStyle(color: Colors.black),
         ),
@@ -77,7 +89,8 @@ class _AgendarState extends State<NovoAgendamento> {
         backgroundColor: const Color.fromARGB(255, 221, 177, 192),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        color: Color.fromARGB(255, 250, 226, 235),
+        /*decoration: BoxDecoration(
           image: DecorationImage(
             image: AssetImage("assets/lahhfundo2.jpeg"),
             fit: BoxFit.cover,
@@ -86,90 +99,125 @@ class _AgendarState extends State<NovoAgendamento> {
               BlendMode.lighten,
             ),
           ),
-        ),
+        ),*/
         child: Padding(
           padding: EdgeInsets.all(20.0),
           child: ListView(
             children: [
               _buildField(
-                  'Cliente',
-                  TextField(
-                    decoration: InputDecoration(
-                      labelStyle: TextStyle(fontSize: fontSize),
+                'Cliente',
+                TextField(
+                  decoration: InputDecoration(
+                    labelStyle: TextStyle(fontSize: fontSize),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      nome = value;
+                    });
+                  },
+                ),
+              ),
+              _buildField(
+                'Procedimento',
+                DropdownButton<String>(
+                  hint: Text('Selecione o procedimento'),
+                  value: procedimento,
+                  items: [
+                    'Design',
+                    'Design + Henna',
+                    'Micropigmentação',
+                    'Epilação',
+                  ].map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? value) {
+                    setState(() {
+                      procedimento = value;
+                    });
+                  },
+                ),
+              ),
+              _buildField(
+                'Data',
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _selectDate(context),
+                      child: Text('Selecionar Data'),
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        nome = value;
-                      });
-                    },
-                  )),
-              _buildField('Procedimento', TextField(
-                onChanged: (value) {
-                  setState(() {
-                    procedimento = value;
-                  });
-                },
-              )),
+                    SizedBox(width: 16.0),
+                    Text(
+                      DateFormat('dd/MM/yyyy').format(selectedDate),
+                      style: TextStyle(fontSize: fontSize),
+                    ),
+                  ],
+                ),
+              ),
               _buildField(
-                  'Data',
-                  Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () => _selectDate(context),
-                        child: Text('Selecionar Data'),
-                      ),
-                      SizedBox(width: 16.0),
-                      Text(
-                        DateFormat('dd/MM/yyyy').format(selectedDate),
-                        style: TextStyle(fontSize: fontSize),
-                      ),
-                    ],
-                  )),
-              _buildField(
-                  'Hora',
-                  Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () => _selectTime(context),
-                        child: Text('Selecionar Hora'),
-                      ),
-                      SizedBox(width: 16.0),
-                      Text(
-                        selectedTime.format(context),
-                        style: TextStyle(fontSize: fontSize),
-                      ),
-                    ],
-                  )),
+                'Hora',
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _selectTime(context),
+                      child: Text('Selecionar Hora'),
+                    ),
+                    SizedBox(width: 16.0),
+                    Text(
+                      selectedTime.format(context),
+                      style: TextStyle(fontSize: fontSize),
+                    ),
+                  ],
+                ),
+              ),
               ElevatedButton(
                 onPressed: () async {
                   if (nome != null && diahora != null && procedimento != null) {
-                    Agenda novaagenda = Agenda(
-                        nome: nome!,
-                        diahora: diahora!,
-                        procedimento: procedimento!);
-                    try {
-                      final db = await widget.sqliteDatabase.database;
-                      await db?.insert(
-                        'agenda',
-                        novaagenda.toMap(),
-                      );
-                      nome = null;
-                      diahora = null;
-                      procedimento = null;
-
+                    if (await _verificarHorarioOcupado(diahora!)) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Cliente adicionado.'),
+                          content: Text(
+                              'Este horário já está ocupado. Escolha outro horário.'),
                         ),
                       );
-                      await Future.delayed(const Duration(seconds: 1));
+                    } else {
+                      // Prossiga com a inserção no banco de dados
+                      Agenda novaagenda = Agenda(
+                        nome: nome!,
+                        diahora: diahora!,
+                        procedimento: procedimento!,
+                      );
+                      try {
+                        final db = await widget.sqliteDatabase.database;
+                        await db?.insert(
+                          'agenda',
+                          novaagenda.toMap(),
+                        );
+                        nome = null;
+                        diahora = null;
+                        procedimento = null;
 
-                      Navigator.pop(context);
-                    } catch (e) {
-                      print('Falha ao adicionar cliente: $e');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Cliente adicionado.'),
+                          ),
+                        );
+                        await Future.delayed(const Duration(seconds: 1));
+                        Navigator.pop(context);
+                      } catch (e) {
+                        print('Falha ao adicionar cliente: $e');
+                      }
                     }
                   } else {
-                    print('Falha ao adicionar cliente. Valores nulos!');
+                    // Campos não preenchidos, mostre um SnackBar de erro
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('Todos os campos precisam ser preenchidos.'),
+                      ),
+                    );
                   }
                 },
                 child: Text('Agendar'),

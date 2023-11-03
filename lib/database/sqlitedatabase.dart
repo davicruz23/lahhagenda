@@ -26,7 +26,19 @@ class SQLiteDatabase {
             id INTEGER PRIMARY KEY,
             nome TEXT,
             diahora DATETIME,
-            procedimento TEXT
+            procedimento TEXT,
+            status TEXT
+          )
+        ''');
+      await db.execute('''
+          CREATE TABLE historico_atendimentos (
+            id INTEGER PRIMARY KEY,
+            nome TEXT,
+            diahora DATETIME,
+            procedimento TEXT,
+            agenda_id INTEGER,
+            status TEXT,
+            FOREIGN KEY (agenda_id) REFERENCES agenda(id)
           )
         ''');
     });
@@ -40,6 +52,7 @@ class SQLiteDatabase {
       nome: row['nome'],
       diahora: DateFormat('yyyy-MM-dd HH:mm:ss').parse(row['diahora']),
       procedimento: row['procedimento'],
+      status: row['status'],
     );
   }
 
@@ -53,6 +66,23 @@ class SQLiteDatabase {
         nome: maps[index]['nome'],
         diahora: diahora,
         procedimento: maps[index]['procedimento'],
+        status: maps[index]['status'],
+      );
+    });
+  }
+
+  Future<List<Agenda>> getAllHistorico() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps =
+        await db!.query('historico_atendimentos');
+    return List.generate(maps.length, (index) {
+      final DateTime diahora = DateTime.parse(maps[index]['diahora']);
+      return Agenda(
+        id: maps[index]['id'],
+        nome: maps[index]['nome'],
+        diahora: diahora,
+        procedimento: maps[index]['procedimento'],
+        status: maps[index]['status'],
       );
     });
   }
