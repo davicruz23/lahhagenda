@@ -15,44 +15,28 @@ class ListarAgendamentos extends StatefulWidget {
 
 class _ListarAgendamentosState extends State<ListarAgendamentos> {
   int currentPage = 0;
-  final int itemsPerPage = 6;
+  final int itemsPerPage = 5;
   String? selectedProcedimento;
 
   final List<String> procedimentos = [
     'Design',
     'Design + Henna',
     'Micropigmentação',
-    'Inginal',
+    'Epilação',
+    'Cílios',
   ];
 
-  Future<void> moveAgendamentosParaHistorico() async {
-    final db = await widget.sqLiteDatabase.database;
-    final currentTime = DateTime.now();
-    final twentyFourHoursAgo = currentTime.subtract(Duration(hours: 24));
+  List<Agenda> agenda = [];
 
-    // Consulta para selecionar os agendamentos com mais de 24 horas
-    final agendamentosParaMover = await db?.query(
-      'agenda',
-      where: 'diahora < ?',
-      whereArgs: [twentyFourHoursAgo.toUtc().toIso8601String()],
-    );
+  @override
+  void initState() {
+    super.initState();
+    updateAgenda();
+  }
 
-    for (final agendamento in agendamentosParaMover!) {
-      // Atualize o status para "cancelado" antes de mover para o histórico
-      await db?.update(
-        'agenda',
-        {'status': 'cancelado'},
-        where: 'id = ?',
-        whereArgs: [agendamento['id']],
-      );
-      // Insira o agendamento no histórico de atendimentos
-      await db?.insert('historico_atendimentos', agendamento);
-      // Exclua o agendamento da tabela agenda
-      await db
-          ?.delete('agenda', where: 'id = ?', whereArgs: [agendamento['id']]);
-    }
-    // Atualize a interface do usuário para refletir as mudanças
-    setState(() {});
+  Future<void> updateAgenda() async {
+    agenda = await widget.sqLiteDatabase.getAllAgenda();
+    setState(() {}); // Atualiza o estado para reconstruir a UI
   }
 
   @override
@@ -69,14 +53,9 @@ class _ListarAgendamentosState extends State<ListarAgendamentos> {
         children: [
           Container(
             decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/lahhfundo2.jpeg"),
-                fit: BoxFit.cover,
-              ),
+              color:
+                  Color.fromARGB(255, 250, 226, 235), // Cor de fundo desejada
             ),
-          ),
-          Container(
-            color: Colors.white.withOpacity(0.5),
           ),
           Column(
             children: [
@@ -95,127 +74,86 @@ class _ListarAgendamentosState extends State<ListarAgendamentos> {
                   });
                 },
               ),
-              FutureBuilder<List<Agenda>>(
-                future: widget.sqLiteDatabase.getAllAgenda(),
-                builder: (context, snapshot) {
-                  try {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError) {
-                      return Center(
-                        child: Text(
-                          'Erro ao carregar agendamentos: ${snapshot.error}',
-                        ),
-                      );
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Center(
-                        child: Text('Nenhum agendamento encontrado'),
-                      );
-                    } else {
-                      List<Agenda> agenda = snapshot.data!;
-                      if (currentPage < 0) currentPage = 0;
-                      final start = currentPage * itemsPerPage;
-                      final end = (currentPage + 1) * itemsPerPage;
-
-                      List<Agenda> filteredAgenda = agenda
-                          .where((agendamento) =>
-                              selectedProcedimento == null ||
-                              agendamento.procedimento == selectedProcedimento)
-                          .toList();
-
-                      final visibleAgenda = filteredAgenda.sublist(
-                        start,
-                        end > filteredAgenda.length
-                            ? filteredAgenda.length
-                            : end,
-                      );
-
-                      return Column(
-                        children: [
-                          for (var a in visibleAgenda)
-                            Card(
-                              margin: EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 16,
-                              ),
-                              elevation: 5,
-                              child: Dismissible(
-                                key: Key(a.id.toString()),
-                                background: Container(
-                                  color: Color.fromARGB(255, 235, 20, 4),
-                                  child:
-                                      Icon(Icons.delete, color: Colors.white),
-                                  alignment: Alignment.centerRight,
-                                  padding: EdgeInsets.only(right: 20.0),
-                                ),
-                                onDismissed: (direction) {
-                                  setState(() {
-                                    // Remove o agendamento da lista
-                                    filteredAgenda.remove(a);
-                                  });
-                                  // Chama o método para excluir o agendamento do banco
-                                  a.deleteAgenda();
-                                },
-                                child: ListTile(
-                                  title: Text(
-                                    a.nome,
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '${a.procedimento} - ${DateFormat('dd/MM/yyyy HH:mm').format(a.diahora)}',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              ElevatedButton(
-                                onPressed: () {
-                                  if (currentPage > 0) {
-                                    setState(() {
-                                      currentPage--;
-                                    });
-                                  }
-                                },
-                                child: Text('Anterior'),
-                              ),
-                              SizedBox(width: 20),
-                              ElevatedButton(
-                                onPressed: () {
-                                  final maxPage =
-                                      (filteredAgenda.length / itemsPerPage)
-                                          .ceil();
-                                  if (currentPage < maxPage - 1) {
-                                    setState(() {
-                                      currentPage++;
-                                    });
-                                  }
-                                },
-                                child: Text('Próximo'),
-                              ),
-                            ],
+              if (agenda.isEmpty)
+                Center(
+                  child: Text('Nenhum agendamento disponível.'),
+                )
+              else
+                for (var a in agenda)
+                  if (selectedProcedimento == null ||
+                      a.procedimento == selectedProcedimento)
+                    Container(
+                      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Color.fromARGB(255, 247, 225, 232),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color.fromARGB(255, 65, 61, 61).withOpacity(0.5),
+                            spreadRadius: 3,
+                            blurRadius: 5,
+                            offset: Offset(0, 3),
                           ),
                         ],
-                      );
-                    }
-                  } catch (error) {
-                    return Center(child: Text('Erro inesperado: $error'));
-                  }
-                },
-              ),
+                      ),
+                      child: ListTile(
+                        title: Text(
+                          a.nome,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${a.procedimento} - ${DateFormat('dd/MM/yyyy HH:mm').format(a.diahora)}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            InkWell(
+                              onTap: () async {
+                                await a.markAsConcluded();
+                                await a.deleteAgenda();
+                                setState(() {
+                                  agenda.remove(a);
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 16),
+                                color: Colors.green,
+                                child: Text('Concluir',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            InkWell(
+                              onTap: () async {
+                                await a.markAsCancelled();
+                                await a.deleteAgenda();
+                                setState(() {
+                                  agenda.remove(a);
+                                });
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 16),
+                                color: Colors.red,
+                                child: Text('Cancelar',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
             ],
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: moveAgendamentosParaHistorico,
-        tooltip: 'Mover para o Histórico',
-        child: Icon(Icons.archive),
       ),
     );
   }

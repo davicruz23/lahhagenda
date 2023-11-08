@@ -22,7 +22,6 @@ class Agenda {
       await db?.update('agenda', toMap(), where: 'id = ?', whereArgs: [id]);
     }
 
-    
     return id!;
   }
 
@@ -42,5 +41,62 @@ class Agenda {
     if (id != null) {
       await db?.delete('agenda', where: 'id = ?', whereArgs: [id]);
     }
+  }
+
+  Future<void> markAsConcluded() async {
+    final db = await SQLiteDatabase().database;
+    if (id != null) {
+      // Atualize o status para "concluído"
+      await db?.update(
+        'agenda',
+        {'status': 'concluído'},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // Recupere os detalhes do agendamento atual
+      final currentAgendamento =
+          await db?.query('agenda', where: 'id = ?', whereArgs: [id]);
+
+      // Insira o agendamento no histórico de atendimentos
+      if (currentAgendamento != null && currentAgendamento.isNotEmpty) {
+        await db?.insert('historico_atendimentos', currentAgendamento[0]);
+      }
+
+      // Em seguida, remova o agendamento da tabela 'agenda'
+      await db?.delete('agenda', where: 'id = ?', whereArgs: [id]);
+    }
+  }
+
+  Future<void> markAsCancelled() async {
+    final db = await SQLiteDatabase().database;
+    if (id != null) {
+      // Atualize o status para "cancelado"
+      await db?.update(
+        'agenda',
+        {'status': 'cancelado'},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // Recupere os detalhes do agendamento atual
+      final currentAgendamento =
+          await db?.query('agenda', where: 'id = ?', whereArgs: [id]);
+
+      // Insira o agendamento no histórico de atendimentos
+      if (currentAgendamento != null && currentAgendamento.isNotEmpty) {
+        await db?.insert('historico_atendimentos', currentAgendamento[0]);
+      }
+    }
+  }
+
+  Future<bool> isHorarioConflitante() async {
+    final db = await SQLiteDatabase().database;
+    final List<Map<String, dynamic>>? result = await db?.query(
+      'agenda',
+      where: 'diahora = ?',
+      whereArgs: [diahora.toIso8601String()],
+    );
+    return result != null && result.isNotEmpty;
   }
 }

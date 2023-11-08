@@ -64,13 +64,20 @@ class _AgendarState extends State<NovoAgendamento> {
     }
   }
 
-  Future<bool> _verificarHorarioOcupado(DateTime horario) async {
+  Future<bool> _verificarHorarioOcupado(DateTime horaSelecionada) async {
     final db = await widget.sqliteDatabase.database;
-    final horarioStr = horario.toUtc().toIso8601String();
+
+    final horaInicioStr = DateFormat('HH:mm').format(horaSelecionada);
+
+    // Calcule a hora final, adicionando 59 minutos
+    final horaFim = horaSelecionada.add(Duration(minutes: 59));
+    final horaFimStr = DateFormat('HH:mm').format(horaFim);
+
     final count = Sqflite.firstIntValue(await db!.rawQuery(
-      'SELECT COUNT(*) FROM agenda WHERE diahora = ?',
-      [horarioStr],
+      'SELECT COUNT(*) FROM agenda WHERE time(diahora) >= ? AND time(diahora) <= ?',
+      [horaInicioStr, horaFimStr],
     ));
+
     print('Número de registros encontrados: $count');
     return count! > 0;
   }
@@ -90,16 +97,6 @@ class _AgendarState extends State<NovoAgendamento> {
       ),
       body: Container(
         color: Color.fromARGB(255, 250, 226, 235),
-        /*decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/lahhfundo2.jpeg"),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              Color.fromARGB(255, 255, 251, 251).withOpacity(0.5),
-              BlendMode.lighten,
-            ),
-          ),
-        ),*/
         child: Padding(
           padding: EdgeInsets.all(20.0),
           child: ListView(
@@ -127,6 +124,7 @@ class _AgendarState extends State<NovoAgendamento> {
                     'Design + Henna',
                     'Micropigmentação',
                     'Epilação',
+                    'Cílios',
                   ].map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
@@ -174,45 +172,61 @@ class _AgendarState extends State<NovoAgendamento> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  if (nome != null && diahora != null && procedimento != null) {
+                  final currentContext =
+                      context; // Capture o contexto atual aqui
+
+                  if (diahora != null) {
                     if (await _verificarHorarioOcupado(diahora!)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(currentContext).showSnackBar(
                         const SnackBar(
                           content: Text(
-                              'Este horário já está ocupado. Escolha outro horário.'),
+                            'Este horário já está ocupado. Escolha outro horário.',
+                          ),
                         ),
                       );
                     } else {
-                      // Prossiga com a inserção no banco de dados
-                      Agenda novaagenda = Agenda(
-                        nome: nome!,
-                        diahora: diahora!,
-                        procedimento: procedimento!,
-                      );
                       try {
                         final db = await widget.sqliteDatabase.database;
-                        await db?.insert(
-                          'agenda',
-                          novaagenda.toMap(),
-                        );
-                        nome = null;
-                        diahora = null;
-                        procedimento = null;
+                        final count = Sqflite.firstIntValue(await db!.rawQuery(
+                          'SELECT COUNT(*) FROM agenda WHERE diahora = ?',
+                          [diahora!.toUtc().toIso8601String()],
+                        ));
+                        if (count != null && count > 0) {
+                          ScaffoldMessenger.of(currentContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Este horário já está ocupado. Escolha outro horário.',
+                              ),
+                            ),
+                          );
+                        } else {
+                          Agenda novaagenda = Agenda(
+                            nome: nome!,
+                            diahora: diahora!,
+                            procedimento: procedimento!,
+                          );
+                          await db.insert(
+                            'agenda',
+                            novaagenda.toMap(),
+                          );
+                          diahora = null;
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Cliente adicionado.'),
-                          ),
-                        );
-                        await Future.delayed(const Duration(seconds: 1));
-                        Navigator.pop(context);
+                          ScaffoldMessenger.of(currentContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('Cliente adicionado.'),
+                            ),
+                          );
+                          await Future.delayed(const Duration(seconds: 1));
+                          Navigator.pop(
+                              currentContext); // Use o contexto capturado aqui
+                        }
                       } catch (e) {
                         print('Falha ao adicionar cliente: $e');
                       }
                     }
                   } else {
                     // Campos não preenchidos, mostre um SnackBar de erro
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    ScaffoldMessenger.of(currentContext).showSnackBar(
                       const SnackBar(
                         content:
                             Text('Todos os campos precisam ser preenchidos.'),
@@ -220,7 +234,15 @@ class _AgendarState extends State<NovoAgendamento> {
                     );
                   }
                 },
-                child: Text('Agendar'),
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all<Color>(
+                      const Color.fromARGB(255, 255, 255, 255)), // Defina a cor de fundo desejada
+                  minimumSize: MaterialStateProperty.all<Size>(
+                      Size(150, 50)), // Tamanho mínimo do botão
+                ),
+                child: const Text(
+                  'Agendar',
+                ),
               ),
             ],
           ),

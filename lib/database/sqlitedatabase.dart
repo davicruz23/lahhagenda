@@ -23,7 +23,7 @@ class SQLiteDatabase {
         onCreate: (Database db, int version) async {
       await db.execute('''
           CREATE TABLE agenda (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT,
             diahora DATETIME,
             procedimento TEXT,
@@ -32,7 +32,7 @@ class SQLiteDatabase {
         ''');
       await db.execute('''
           CREATE TABLE historico_atendimentos (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT,
             diahora DATETIME,
             procedimento TEXT,
@@ -50,7 +50,7 @@ class SQLiteDatabase {
     return Agenda(
       id: row['id'],
       nome: row['nome'],
-      diahora: DateFormat('yyyy-MM-dd HH:mm:ss').parse(row['diahora']),
+      diahora: DateFormat('yyyy-MM-dd HH:mm').parse(row['diahora']).toLocal(),
       procedimento: row['procedimento'],
       status: row['status'],
     );
@@ -60,7 +60,7 @@ class SQLiteDatabase {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db!.query('agenda');
     return List.generate(maps.length, (index) {
-      final DateTime diahora = DateTime.parse(maps[index]['diahora']);
+      final DateTime diahora = DateTime.parse(maps[index]['diahora']).toLocal();
       return Agenda(
         id: maps[index]['id'],
         nome: maps[index]['nome'],
@@ -76,7 +76,7 @@ class SQLiteDatabase {
     final List<Map<String, dynamic>> maps =
         await db!.query('historico_atendimentos');
     return List.generate(maps.length, (index) {
-      final DateTime diahora = DateTime.parse(maps[index]['diahora']);
+      final DateTime diahora = DateTime.parse(maps[index]['diahora']).toLocal();
       return Agenda(
         id: maps[index]['id'],
         nome: maps[index]['nome'],
@@ -86,4 +86,5 @@ class SQLiteDatabase {
       );
     });
   }
+  
 }
