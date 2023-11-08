@@ -49,111 +49,121 @@ class _ListarAgendamentosState extends State<ListarAgendamentos> {
           style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
         ),
       ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color:
-                  Color.fromARGB(255, 250, 226, 235), // Cor de fundo desejada
-            ),
-          ),
-          Column(
-            children: [
-              DropdownButton<String>(
-                hint: Text('Selecione o procedimento'),
-                value: selectedProcedimento,
-                items: procedimentos.map((String procedimento) {
-                  return DropdownMenuItem<String>(
-                    value: procedimento,
-                    child: Text(procedimento),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedProcedimento = newValue;
-                  });
-                },
+      body: SingleChildScrollView(
+        // Adicione o SingleChildScrollView aqui
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Color.fromARGB(255, 250, 226, 235),
               ),
-              if (agenda.isEmpty)
-                Center(
-                  child: Text('Nenhum agendamento disponível.'),
-                )
-              else
-                for (var a in agenda)
-                  if (selectedProcedimento == null ||
-                      a.procedimento == selectedProcedimento)
-                    Container(
-                      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Color.fromARGB(255, 247, 225, 232),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color.fromARGB(255, 65, 61, 61).withOpacity(0.5),
-                            spreadRadius: 3,
-                            blurRadius: 5,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        title: Text(
-                          a.nome,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${a.procedimento} - ${DateFormat('dd/MM/yyyy HH:mm').format(a.diahora)}',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            InkWell(
-                              onTap: () async {
-                                await a.markAsConcluded();
-                                await a.deleteAgenda();
-                                setState(() {
-                                  agenda.remove(a);
-                                });
-                              },
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 8, horizontal: 16),
-                                color: Colors.green,
-                                child: Text('Concluir',
-                                    style: TextStyle(color: Colors.white)),
+            ),
+            Column(
+              children: [
+                DropdownButton<String>(
+                  hint: Text('Selecione o procedimento'),
+                  value: selectedProcedimento,
+                  items: procedimentos.map((String procedimento) {
+                    return DropdownMenuItem<String>(
+                      value: procedimento,
+                      child: Text(procedimento),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedProcedimento = newValue;
+                    });
+                  },
+                ),
+                if (agenda.isEmpty)
+                  Center(
+                    child: Text('Nenhum agendamento disponível.'),
+                  )
+                else
+                  Column(
+                    children: agenda
+                        .where((a) =>
+                            selectedProcedimento == null ||
+                            a.procedimento == selectedProcedimento)
+                        .map((a) => Container(
+                              margin: EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 16),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                color: Color.fromARGB(255, 247, 225, 232),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color.fromARGB(255, 65, 61, 61)
+                                        .withOpacity(0.5),
+                                    spreadRadius: 3,
+                                    blurRadius: 5,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
                               ),
-                            ),
-                            SizedBox(width: 10),
-                            InkWell(
-                              onTap: () async {
-                                await a.markAsCancelled();
-                                await a.deleteAgenda();
-                                setState(() {
-                                  agenda.remove(a);
-                                });
-                              },
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 8, horizontal: 16),
-                                color: Colors.red,
-                                child: Text('Cancelar',
-                                    style: TextStyle(color: Colors.white)),
+                              child: ListTile(
+                                title: Text(
+                                  a.nome,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${a.procedimento} - ${DateFormat('dd/MM/yyyy HH:mm').format(a.diahora)}',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    InkWell(
+                                      onTap: () async {
+                                        await a.markAsConcluded();
+                                        await a.deleteAgenda();
+                                        setState(() {
+                                          agenda.remove(a);
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 8, horizontal: 16),
+                                        color: Colors.green,
+                                        child: Text('Concluir',
+                                            style:
+                                                TextStyle(color: Colors.white)),
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    InkWell(
+                                      onTap: () async {
+                                        await a.markAsCancelled();
+                                        await a.deleteAgenda();
+                                        setState(() {
+                                          agenda.remove(a);
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 8, horizontal: 16),
+                                        color: Colors.red,
+                                        child: Text('Cancelar',
+                                            style:
+                                                TextStyle(color: Colors.white)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-            ],
-          ),
-        ],
+                            ))
+                        .toList(),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
